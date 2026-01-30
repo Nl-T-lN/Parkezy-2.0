@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 struct CommercialFacilityDetailView: View {
     let facility: CommercialParkingFacility

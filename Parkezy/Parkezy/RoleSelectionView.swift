@@ -140,7 +140,7 @@ struct HostTypeSelectionView: View {
     @EnvironmentObject var hostViewModel: HostViewModel
     @EnvironmentObject var privateViewModel: PrivateParkingViewModel
     
-    @State private var selectedHostType: HostType = .private
+    @State private var selectedHostType: HostType = .privateParking
     @State private var navigateToDashboard = false
     
     enum HostType {

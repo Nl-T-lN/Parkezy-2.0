@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 struct PrivateListingDetailView: View {
     let listing: PrivateParkingListing
