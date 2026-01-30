@@ -13,41 +13,39 @@ struct PrivateHostDashboardView: View {
     @State private var showAddListing = false
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: DesignSystem.Spacing.l) {
-                    // MARK: - Stats Cards
-                    statsSection
-                    
-                    // MARK: - Pending Approvals
-                    if !viewModel.pendingApprovals.isEmpty {
-                        pendingApprovalsSection
-                    }
-                    
-                    // MARK: - My Listings
-                    myListingsSection
-                    
-                    // MARK: - Recent Activity
-                    recentActivitySection
+        ScrollView {
+            VStack(spacing: DesignSystem.Spacing.l) {
+                // MARK: - Stats Cards
+                statsSection
+                
+                // MARK: - Pending Approvals
+                if !viewModel.pendingApprovals.isEmpty {
+                    pendingApprovalsSection
                 }
-                .padding(DesignSystem.Spacing.m)
+                
+                // MARK: - My Listings
+                myListingsSection
+                
+                // MARK: - Recent Activity
+                recentActivitySection
             }
-            .navigationTitle("My Parking Spaces")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddListing = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                    }
+            .padding(DesignSystem.Spacing.m)
+        }
+        .navigationTitle("My Parking Spaces")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showAddListing = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
                 }
             }
-            .sheet(isPresented: $showAddListing) {
-                Text("Add New Listing (Coming Soon)")
-                    .font(.title)
-                    .padding()
-            }
+        }
+        .sheet(isPresented: $showAddListing) {
+            Text("Add New Listing (Coming Soon)")
+                .font(.title)
+                .padding()
         }
     }
     
@@ -386,6 +384,8 @@ struct ActivityRow: View {
 // MARK: - Preview
 
 #Preview {
-    PrivateHostDashboardView()
-        .environmentObject(PrivateParkingViewModel())
+    NavigationStack {
+        PrivateHostDashboardView()
+            .environmentObject(PrivateParkingViewModel())
+    }
 }

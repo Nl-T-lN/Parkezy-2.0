@@ -343,4 +343,6 @@ enum UserRole {
         .environmentObject(MapViewModel())
         .environmentObject(BookingViewModel())
         .environmentObject(HostViewModel())
+        .environmentObject(CommercialParkingViewModel())
+        .environmentObject(PrivateParkingViewModel())
 }
