@@ -165,10 +165,18 @@ struct PrivateHostDashboardView: View {
                     .padding(.vertical, DesignSystem.Spacing.l)
             } else {
                 ForEach(recentBookings) { booking in
-                    ActivityRow(
-                        booking: booking,
-                        listingName: viewModel.listings.first { $0.id == booking.listingID }?.title ?? "Unknown"
-                    )
+                    NavigationLink {
+                        BookingDetailView(
+                            booking: booking,
+                            listingName: viewModel.listings.first { $0.id == booking.listingID }?.title ?? "Unknown"
+                        )
+                    } label: {
+                        ActivityRow(
+                            booking: booking,
+                            listingName: viewModel.listings.first { $0.id == booking.listingID }?.title ?? "Unknown"
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -177,7 +185,7 @@ struct PrivateHostDashboardView: View {
     // Computed property for recent bookings
     private var recentBookings: [PrivateBooking] {
         viewModel.bookings
-            .filter { $0.status == .approved || $0.status == .active || $0.status == .completed }
+            .filter { $0.status == .approved || $0.status == .active || $0.status == .completed || $0.status == .rejected }
             .sorted { $0.approvalTime ?? $0.requestTime > $1.approvalTime ?? $1.requestTime }
             .prefix(5)
             .map { $0 }
@@ -407,13 +415,17 @@ struct ActivityRow: View {
             
             Spacer()
             
+            Spacer()
+            
             VStack(alignment: .trailing, spacing: 2) {
-                Text("+₹\(Int(booking.actualCost ?? booking.estimatedCost))")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.green)
                 Text(booking.scheduledStartTime.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
             }
         }
         .padding(DesignSystem.Spacing.s)
