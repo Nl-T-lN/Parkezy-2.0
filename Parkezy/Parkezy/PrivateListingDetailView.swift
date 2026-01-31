@@ -14,7 +14,10 @@ struct PrivateListingDetailView: View {
     @EnvironmentObject var viewModel: PrivateParkingViewModel
     
     @State private var selectedSlot: PrivateParkingSlot?
-    @State private var showBookingSheet = false
+    @State private var hourlyDuration: Double = 3
+    @State private var startDate = Date()
+    @State private var message = ""
+    @State private var isBooking = false
     
     var body: some View {
         ScrollView {
@@ -34,6 +37,11 @@ struct PrivateListingDetailView: View {
                 // MARK: - Slot Selection
                 slotSelectionSection
                 
+                // MARK: - Booking Form
+                if selectedSlot != nil {
+                    bookingFormSection
+                }
+                
                 // MARK: - Amenities
                 amenitiesSection
                 
@@ -43,11 +51,6 @@ struct PrivateListingDetailView: View {
         }
         .navigationTitle("Listing Details")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showBookingSheet, onDismiss: { selectedSlot = nil }) {
-            if let slot = selectedSlot {
-                PrivateBookingSheet(listing: listing, slot: slot)
-            }
-        }
     }
     
     // MARK: - Header Section
@@ -131,28 +134,29 @@ struct PrivateListingDetailView: View {
             Text("Pricing")
                 .font(.headline)
             
-            HStack(spacing: DesignSystem.Spacing.m) {
-                PricingCard(
-                    icon: "clock.fill",
-                    label: "Hourly",
-                    price: "₹\(Int(listing.hourlyRate))",
-                    isPopular: true
-                )
+            HStack {
+                Image(systemName: "clock.fill")
+                    .font(.title2)
+                    .foregroundColor(DesignSystem.Colors.primary)
                 
-                PricingCard(
-                    icon: "sun.max.fill",
-                    label: "Daily",
-                    price: "₹\(Int(listing.dailyRate))",
-                    isPopular: false
-                )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Hourly Rate")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text("₹\(Int(listing.hourlyRate))/hour")
+                        .font(.title2.bold())
+                        .foregroundColor(DesignSystem.Colors.primary)
+                }
                 
-                PricingCard(
-                    icon: "calendar",
-                    label: "Monthly",
-                    price: "₹\(Int(listing.monthlyRate))",
-                    isPopular: false
-                )
+                Spacer()
             }
+            .padding()
+            .background(DesignSystem.Colors.primary.opacity(0.1))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(DesignSystem.Colors.primary, lineWidth: 2)
+            )
             
             // Pricing intelligence for comparison
             if let suggested = listing.suggestedHourlyRate {
@@ -234,7 +238,6 @@ struct PrivateListingDetailView: View {
                         if !slot.isOccupied && !slot.isDisabled {
                             withAnimation(.spring(response: 0.3)) {
                                 selectedSlot = slot
-                                showBookingSheet = true
                             }
                         }
                     }
@@ -288,48 +291,142 @@ struct PrivateListingDetailView: View {
         }
         .padding(DesignSystem.Spacing.m)
     }
-}
-
-// MARK: - Pricing Card
-
-struct PricingCard: View {
-    let icon: String
-    let label: String
-    let price: String
-    let isPopular: Bool
     
-    var body: some View {
-        VStack(spacing: 6) {
-            if isPopular {
-                Text("POPULAR")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.green)
-                    .cornerRadius(4)
+    // MARK: - Booking Form Section
+    
+    private var bookingFormSection: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.m) {
+            Text("Book This Spot")
+                .font(.headline)
+            
+            // Duration Selector
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Duration")
+                    .font(.subheadline.bold())
+                
+                Stepper(value: $hourlyDuration, in: 0.5...24, step: 0.5) {
+                    HStack {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(DesignSystem.Colors.primary)
+                        Text("\(String(format: "%.1f", hourlyDuration)) hours")
+                            .font(.headline)
+                    }
+                }
+                .padding()
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(10)
             }
             
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(isPopular ? DesignSystem.Colors.primary : .secondary)
+            // Start Time
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Start Time")
+                    .font(.subheadline.bold())
+                
+                DatePicker("", selection: $startDate, in: Date()...)
+                    .labelsHidden()
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(10)
+            }
             
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Message to Host
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Message to Host (Optional)")
+                    .font(.subheadline.bold())
+                
+                TextField("Any special requests?", text: $message, axis: .vertical)
+                    .lineLimit(3...5)
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(10)
+            }
             
-            Text(price)
-                .font(.headline)
-                .foregroundColor(isPopular ? DesignSystem.Colors.primary : .primary)
+            // Cost Summary
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Rate")
+                    Spacer()
+                    Text("₹\(Int(listing.hourlyRate))/hour")
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack {
+                    Text("Duration")
+                    Spacer()
+                    Text("\(String(format: "%.1f", hourlyDuration)) hrs")
+                        .foregroundColor(.secondary)
+                }
+                
+                Divider()
+                
+                HStack {
+                    Text("Total (incl. GST)")
+                        .font(.headline)
+                    Spacer()
+                    Text("₹\(Int(totalCost))")
+                        .font(.title3.bold())
+                        .foregroundColor(DesignSystem.Colors.primary)
+                }
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(12)
+            
+            // Book Button
+            Button(action: requestBooking) {
+                HStack {
+                    if isBooking {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text(listing.autoAcceptBookings ? "Book Now" : "Request Booking")
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(DesignSystem.Colors.primary)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(isBooking)
+            
+            if !listing.autoAcceptBookings {
+                Text("This booking requires host approval. You'll be notified once approved.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, DesignSystem.Spacing.m)
-        .background(isPopular ? DesignSystem.Colors.primary.opacity(0.1) : Color(.tertiarySystemBackground))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isPopular ? DesignSystem.Colors.primary : Color.clear, lineWidth: 2)
-        )
+        .padding(DesignSystem.Spacing.m)
+        .background(Color(.systemBackground))
+    }
+    
+    // MARK: - Helper Functions
+    
+    private var totalCost: Double {
+        listing.hourlyRate * hourlyDuration * 1.18 // Including GST
+    }
+    
+    private func requestBooking() {
+        guard let slot = selectedSlot else { return }
+        
+        isBooking = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            let endTime = startDate.addingTimeInterval(hourlyDuration * 3600)
+            
+            viewModel.requestBooking(
+                listingID: listing.id,
+                slotID: slot.id,
+                startTime: startDate,
+                endTime: endTime,
+                durationType: .hourly,
+                driverMessage: message.isEmpty ? nil : message
+            )
+            
+            isBooking = false
+            dismiss()
+        }
     }
 }
 
@@ -401,6 +498,7 @@ struct PrivateSlotCard: View {
 struct PrivateBookingSheet: View {
     let listing: PrivateParkingListing
     let slot: PrivateParkingSlot
+    var initialDurationType: PrivateBookingDuration = .hourly
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var viewModel: PrivateParkingViewModel
     
@@ -521,6 +619,9 @@ struct PrivateBookingSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .onAppear {
+                durationType = initialDurationType
             }
         }
     }
