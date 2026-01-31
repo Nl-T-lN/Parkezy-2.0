@@ -166,8 +166,21 @@ struct HostDashboardView: View {
                 showQRScanner = true
             }
             
-            QuickHostAction(icon: "list.bullet.rectangle", title: "All Bookings") {
-                // Navigate to bookings list
+            NavigationLink(destination: HostBookingsView()) {
+                VStack(spacing: DesignSystem.Spacing.s) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.title2)
+                        .foregroundColor(DesignSystem.Colors.primary)
+                    
+                    Text("All Bookings")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignSystem.Spacing.m)
+                .background(Color(.systemBackground))
+                .cornerRadius(DesignSystem.Spacing.s)
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
             }
             
             QuickHostAction(icon: "gearshape.fill", title: "Settings") {
