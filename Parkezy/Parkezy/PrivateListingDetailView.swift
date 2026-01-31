@@ -43,7 +43,7 @@ struct PrivateListingDetailView: View {
         }
         .navigationTitle("Listing Details")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showBookingSheet) {
+        .sheet(isPresented: $showBookingSheet, onDismiss: { selectedSlot = nil }) {
             if let slot = selectedSlot {
                 PrivateBookingSheet(listing: listing, slot: slot)
             }

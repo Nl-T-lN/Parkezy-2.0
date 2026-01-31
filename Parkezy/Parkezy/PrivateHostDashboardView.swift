@@ -43,9 +43,7 @@ struct PrivateHostDashboardView: View {
             }
         }
         .sheet(isPresented: $showAddListing) {
-            Text("Add New Listing (Coming Soon)")
-                .font(.title)
-                .padding()
+            AddPrivateListingView()
         }
     }
     
@@ -165,10 +163,18 @@ struct PrivateHostDashboardView: View {
                     .padding(.vertical, DesignSystem.Spacing.l)
             } else {
                 ForEach(recentBookings) { booking in
-                    ActivityRow(
-                        booking: booking,
-                        listingName: viewModel.listings.first { $0.id == booking.listingID }?.title ?? "Unknown"
-                    )
+                    NavigationLink {
+                        BookingDetailView(
+                            booking: booking,
+                            listingName: viewModel.listings.first { $0.id == booking.listingID }?.title ?? "Unknown"
+                        )
+                    } label: {
+                        ActivityRow(
+                            booking: booking,
+                            listingName: viewModel.listings.first { $0.id == booking.listingID }?.title ?? "Unknown"
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
