@@ -1,5 +1,6 @@
 
 import SwiftUI
+import CoreLocation
 
 struct AddPrivateListingView: View {
     @Environment(\.dismiss) var dismiss

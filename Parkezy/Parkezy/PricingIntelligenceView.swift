@@ -11,15 +11,11 @@ import CoreLocation
 struct PricingIntelligenceView: View {
     let listing: PrivateParkingListing
     @State private var currentHourlyRate: Double
-    @State private var currentDailyRate: Double
-    @State private var currentMonthlyRate: Double
     @State private var showSaveConfirmation = false
     
     init(listing: PrivateParkingListing) {
         self.listing = listing
         _currentHourlyRate = State(initialValue: listing.hourlyRate)
-        _currentDailyRate = State(initialValue: listing.dailyRate)
-        _currentMonthlyRate = State(initialValue: listing.monthlyRate)
     }
     
     var body: some View {
@@ -39,24 +35,10 @@ struct PricingIntelligenceView: View {
                     range: 20...100,
                     icon: "clock.fill"
                 )
-                
-                pricingSlider(
-                    label: "Daily Rate",
-                    value: $currentDailyRate,
-                    range: 150...800,
-                    icon: "sun.max.fill"
-                )
-                
-                pricingSlider(
-                    label: "Monthly Rate",
-                    value: $currentMonthlyRate,
-                    range: 1500...8000,
-                    icon: "calendar"
-                )
             } header: {
                 Text("Your Pricing")
             } footer: {
-                Text("Adjusting prices affects your visibility in search results. Competitive prices rank higher.")
+                Text("Adjusting price affects your visibility in search results. Competitive prices rank higher.")
             }
             
             // MARK: - Recommendations
@@ -278,8 +260,6 @@ struct PricingIntelligenceView: View {
                 listingDescription: "A nice parking spot",
                 slots: [],
                 hourlyRate: 45,
-                dailyRate: 350,
-                monthlyRate: 3500,
                 flatFullBookingRate: nil,
                 autoAcceptBookings: false,
                 instantBookingDiscount: nil,
