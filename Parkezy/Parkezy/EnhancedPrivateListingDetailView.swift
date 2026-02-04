@@ -18,6 +18,7 @@ struct EnhancedPrivateListingDetailView: View {
     @State private var selectedSlot: PrivateParkingSlot?
     @State private var showBookingSheet = false
     @State private var imageIndex = 0
+    @State private var isLoading = true
     
     // Detect if owner
     private var isOwnerView: Bool {
@@ -25,6 +26,28 @@ struct EnhancedPrivateListingDetailView: View {
     }
     
     var body: some View {
+        ZStack {
+            if isLoading {
+                skeletonView
+                    .background(Color(.systemBackground))
+                    .zIndex(1)
+                    .transition(.opacity)
+            } else {
+                mainContent
+                    .zIndex(0)
+            }
+        }
+        .onAppear {
+            // Simulate loading / allow transition to finish
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                withAnimation {
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
+    private var mainContent: some View {
         ScrollView {
             VStack(spacing: 0) {
                 // MARK: - Hero Image/Map
@@ -82,7 +105,7 @@ struct EnhancedPrivateListingDetailView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if !isOwnerView {
+            if !isOwnerView || !allowEditing {
                 bookNowButton
             }
         }
@@ -593,6 +616,63 @@ struct EnhancedPrivateListingDetailView: View {
         mapItem.openInMaps(launchOptions: [
             MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
         ])
+    }
+
+
+    // MARK: - Skeleton View
+    
+    private var skeletonView: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                // Hero Placeholder
+                SkeletonBlock(height: 250, cornerRadius: 0)
+                
+                // Quick Info Bar
+                HStack(spacing: 16) {
+                    ForEach(0..<3) { _ in
+                        SkeletonBlock(width: 80, height: 16)
+                    }
+                    Spacer()
+                }
+                .padding(DesignSystem.Spacing.m)
+                .background(Color(.systemGray6))
+                
+                VStack(spacing: DesignSystem.Spacing.l) {
+                    // Title & Address
+                    VStack(alignment: .leading, spacing: 8) {
+                        SkeletonBlock(width: 250, height: 28)
+                        SkeletonBlock(width: 200, height: 16)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Pricing Card
+                    SkeletonBlock(height: 120, cornerRadius: 16)
+                    
+                    // Availability
+                    VStack(alignment: .leading, spacing: 12) {
+                        SkeletonBlock(width: 120, height: 20)
+                        SkeletonBlock(height: 60, cornerRadius: 10)
+                        HStack {
+                            ForEach(0..<7) { _ in
+                                SkeletonCircle(size: 32)
+                            }
+                        }
+                    }
+                    
+                    // Amenities
+                    VStack(alignment: .leading, spacing: 12) {
+                        SkeletonBlock(width: 150, height: 20)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            ForEach(0..<4) { _ in
+                                SkeletonBlock(height: 50, cornerRadius: 10)
+                            }
+                        }
+                    }
+                }
+                .padding(DesignSystem.Spacing.m)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

@@ -231,8 +231,10 @@ class PrivateParkingViewModel: ObservableObject {
             )
         ]
         
-        // Set first 3 as "my listings" for host demo
-        myListings = Array(listings.prefix(3))
+        
+        
+        // Filter "my listings" to strictly match the current mock owner
+        myListings = listings.filter { $0.ownerID == ownerID }
     }
     
     private func createListing(
