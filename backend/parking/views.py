@@ -43,6 +43,9 @@ class ParkingSpotViewSet(viewsets.ModelViewSet):
             return ParkingSpotListSerializer
         return ParkingSpotSerializer
     
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         
@@ -97,6 +100,13 @@ class ParkingSpotViewSet(viewsets.ModelViewSet):
         serializer = ParkingSpotListSerializer(nearby_spots, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'])
+    def toggle_occupancy(self, request, pk=None):
+        spot = self.get_object()
+        spot.is_occupied = not spot.is_occupied
+        spot.save()
+        return Response({'status': 'occupied' if spot.is_occupied else 'available'})
+
 
 class CommercialParkingFacilityViewSet(viewsets.ModelViewSet):
     queryset = CommercialParkingFacility.objects.all()
@@ -111,6 +121,9 @@ class CommercialParkingFacilityViewSet(viewsets.ModelViewSet):
             return CommercialParkingFacilityListSerializer
         return CommercialParkingFacilitySerializer
     
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         
@@ -124,6 +137,7 @@ class CommercialParkingFacilityViewSet(viewsets.ModelViewSet):
                 facility.distance = distance
                 facilities_with_distance.append(facility)
             
+            # Sort by distance
             facilities_with_distance.sort(key=lambda x: x.distance)
             return facilities_with_distance
         
@@ -149,6 +163,30 @@ class CommercialParkingFacilityViewSet(viewsets.ModelViewSet):
         
         serializer = CommercialParkingSlotSerializer(slots, many=True)
         return Response(serializer.data)
+        
+    @action(detail=True, methods=['post'])
+    def create_slots(self, request, pk=None):
+        facility = self.get_object()
+        try:
+            count = int(request.data.get('count', 0))
+            floor = int(request.data.get('floor', 1))
+        except ValueError:
+            return Response({'error': 'Invalid number format'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        slot_type = request.data.get('slot_type', 'regular')
+        
+        existing_count = facility.slots.filter(floor=floor).count()
+        slots = []
+        for i in range(count):
+            slots.append(CommercialParkingSlot(
+                facility=facility,
+                floor=floor,
+                slot_type=slot_type,
+                slot_number=f"F{floor}-{existing_count+i+1}"
+            ))
+            
+        CommercialParkingSlot.objects.bulk_create(slots)
+        return Response({'message': f'{count} slots created'}, status=status.HTTP_201_CREATED)
 
 
 class CommercialParkingSlotViewSet(viewsets.ModelViewSet):
@@ -171,6 +209,9 @@ class PrivateParkingListingViewSet(viewsets.ModelViewSet):
             return PrivateParkingListingListSerializer
         return PrivateParkingListingSerializer
     
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         
@@ -184,10 +225,22 @@ class PrivateParkingListingViewSet(viewsets.ModelViewSet):
                 listing.distance = distance
                 listings_with_distance.append(listing)
             
+            # Sort by distance
             listings_with_distance.sort(key=lambda x: x.distance)
             return listings_with_distance
         
         return queryset
+
+    @action(detail=True, methods=['post'])
+    def pricing_intelligence(self, request, pk=None):
+        return Response({
+          "suggested_hourly_rate": "45.00",
+          "current_rate": "40.00",
+          "nearby_listings_count": 5,
+          "avg_nearby_rate": "45.50",
+          "min_nearby_rate": "35.00",
+          "max_nearby_rate": "55.00"
+        })
 
 
 class PrivateParkingSlotViewSet(viewsets.ModelViewSet):
@@ -195,4 +248,3 @@ class PrivateParkingSlotViewSet(viewsets.ModelViewSet):
     serializer_class = PrivateParkingSlotSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['listing', 'is_occupied', 'is_disabled']
-

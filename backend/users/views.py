@@ -21,7 +21,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
     
     def get_permissions(self):
-        if self.action in ['create', 'login']:
+        if self.action in ['create', 'login', 'register']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
     
@@ -82,3 +82,10 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(UserSerializer(request.user).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['post'])
+    def switch_role(self, request):
+        """Switch user role between Driver and Host"""
+        user = request.user
+        user.is_host = not user.is_host
+        user.save()
+        return Response(UserSerializer(user).data)

@@ -409,17 +409,18 @@ struct LocationStepView: View {
             .padding(.top, DesignSystem.Spacing.l)
             
             // Map
-            ZStack {
-                Map(coordinateRegion: $region, showsUserLocation: !EmulatorDetector.isSimulator)
-                    .frame(height: 250)
-                    .cornerRadius(16)
-                
-                // Center pin
-                Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.red)
-            }
-            .padding(.horizontal)
+            Map(coordinateRegion: $region, 
+                interactionModes: .all,
+                showsUserLocation: !EmulatorDetector.isSimulator)
+                .frame(height: 250)
+                .cornerRadius(16)
+                .overlay(
+                    // Center pin
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.red)
+                )
+                .padding(.horizontal)
             
             // Address Display
             if !selectedAddress.isEmpty {

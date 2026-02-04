@@ -38,6 +38,11 @@ struct AuthenticationView: View {
                     // Apple Sign-In
                     appleSignInButton
                     
+                    // Quick Test Login (Development Only)
+                    #if DEBUG
+                    testLoginButton
+                    #endif
+                    
                     // Toggle Sign Up / Sign In
                     toggleSection
                 }
@@ -232,6 +237,33 @@ struct AuthenticationView: View {
             .fontWeight(.semibold)
         }
         .font(.footnote)
+    }
+    
+    // MARK: - Test Login (Development)
+    
+    private var testLoginButton: some View {
+        Button {
+            email = "test@parkezy.com"
+            password = "test123"
+            Task {
+                await authViewModel.signIn(email: email, password: password)
+            }
+        } label: {
+            HStack {
+                Image(systemName: "hammer.fill")
+                Text("Quick Test Login")
+            }
+            .font(.footnote)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.orange.opacity(0.2))
+            .foregroundColor(.orange)
+            .cornerRadius(DesignSystem.Spacing.m)
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignSystem.Spacing.m)
+                    .stroke(Color.orange, lineWidth: 1)
+            )
+        }
     }
     
     // MARK: - Validation

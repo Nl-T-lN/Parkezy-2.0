@@ -16,6 +16,7 @@ struct RoleSelectionView: View {
     
     // MARK: - Environment
     
+    @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var mapViewModel: MapViewModel
     @EnvironmentObject var bookingViewModel: BookingViewModel
     @EnvironmentObject var hostViewModel: HostViewModel
@@ -124,6 +125,24 @@ struct RoleSelectionView: View {
             }
             .navigationDestination(isPresented: $navigateToRole) {
                 destinationView
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        authViewModel.signOut()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("Logout")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(8)
+                    }
+                }
             }
         }
     }

@@ -12,7 +12,7 @@ struct BookingSession: Identifiable, Codable, Hashable {
     let spotID: UUID
     let userID: UUID
     
-    // Timing
+            // Timing
     let bookingTime: Date
     let scheduledStartTime: Date
     var actualStartTime: Date?

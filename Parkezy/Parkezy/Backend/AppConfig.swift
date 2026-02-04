@@ -31,3 +31,4 @@ struct AppConfig {
         Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil
     }
 }
+

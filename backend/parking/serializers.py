@@ -12,7 +12,7 @@ class ParkingSpotSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingSpot
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at', 'rating', 'review_count']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'rating', 'review_count', 'owner']
 
 
 class ParkingSpotListSerializer(serializers.ModelSerializer):
@@ -47,7 +47,7 @@ class CommercialParkingFacilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = CommercialParkingFacility
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at', 'rating', 'review_count']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'rating', 'review_count', 'owner']
 
 
 class CommercialParkingFacilityListSerializer(serializers.ModelSerializer):
@@ -83,7 +83,7 @@ class PrivateParkingListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrivateParkingListing
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at', 'rating', 'review_count']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'rating', 'review_count', 'owner']
 
 
 class PrivateParkingListingListSerializer(serializers.ModelSerializer):
