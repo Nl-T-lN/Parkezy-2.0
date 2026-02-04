@@ -29,7 +29,7 @@ struct EnhancedPrivateListingDetailView: View {
         ZStack {
             if isLoading {
                 skeletonView
-                    .background(Color(.systemBackground))
+                    .background(Color(.systemGray6))
                     .zIndex(1)
                     .transition(.opacity)
             } else {
