@@ -8,6 +8,7 @@
 
 import Foundation
 import CoreLocation
+import FirebaseAuth
 
 /// Service for interacting with Django parking APIs
 final class ParkingAPIService {
@@ -113,9 +114,92 @@ final class ParkingAPIService {
         return try decoder.decode([PrivateParkingResponse].self, from: data)
     }
     
-    // MARK: - Commercial Parking Facilities
+    /// Get authenticated user's private parking listings
+    func getMyPrivateListings() async throws -> [PrivateParkingResponse] {
+        var components = URLComponents(string: "\(baseURL)/parking/private-listings/")!
+        components.queryItems = [
+            URLQueryItem(name: "mine", value: "true")
+        ]
+        
+        guard let url = components.url else {
+            throw ParkingAPIError.invalidURL
+        }
+        
+        var urlRequest = URLRequest(url: url)
+        
+        // Add auth token (REQUIRED)
+        if let token = try? await getAuthToken() {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+             return []
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+             throw ParkingAPIError.invalidResponse
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+             throw ParkingAPIError.httpError(statusCode: httpResponse.statusCode)
+        }
+        
+        return try decoder.decode([PrivateParkingResponse].self, from: data)
+    }
     
-    /// Create a new commercial parking facility
+    // MARK: - User Profile
+    
+    /// Get current user profile
+    func getUserProfile() async throws -> UserProfile {
+        let url = URL(string: "\(baseURL)/users/me/")!
+        var urlRequest = URLRequest(url: url)
+        
+        // Add auth token (REQUIRED)
+        if let token = try? await getAuthToken() {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+             throw ParkingAPIError.invalidResponse // Auth required
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw ParkingAPIError.fetchFailed
+        }
+        
+        return try decoder.decode(UserProfile.self, from: data)
+    }
+    
+    // MARK: - Update Listing
+    
+    /// Update a private parking listing
+    func updatePrivateListing(id: Int, request: UpdatePrivateListingRequest) async throws -> PrivateParkingResponse {
+        let url = URL(string: "\(baseURL)/parking/private-listings/\(id)/")!
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "PUT"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add auth token
+        if let token = try? await getAuthToken() {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        urlRequest.httpBody = try encoder.encode(request)
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ParkingAPIError.invalidResponse
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            throw ParkingAPIError.httpError(statusCode: httpResponse.statusCode)
+        }
+        
+        return try decoder.decode(PrivateParkingResponse.self, from: data)
+    }
+
     func createCommercialFacility(_ request: CreateCommercialFacilityRequest) async throws -> CommercialParkingResponse {
         let url = URL(string: "\(baseURL)/parking/commercial-facilities/")!
         var urlRequest = URLRequest(url: url)
@@ -196,9 +280,10 @@ final class ParkingAPIService {
     
     /// Get Firebase auth token for Django backend
     private func getAuthToken() async throws -> String? {
-        // For now, return nil - auth integration can be added later
-        // TODO: Integrate with Firebase auth token
-        return nil
+        guard let currentUser = Auth.auth().currentUser else {
+            return nil
+        }
+        return try await currentUser.getIDToken()
     }
 }
 
@@ -313,11 +398,45 @@ enum ParkingAPIError: LocalizedError {
 
 // MARK: - Extensions
 
+// MARK: - User Models
+
+struct UserProfile: Codable {
+    let id: Int
+    let email: String
+    let name: String
+    let phoneNumber: String?
+    let isHost: Bool
+    let profileImageUrl: String?
+}
+
+// MARK: - Request Models
+
+struct UpdatePrivateListingRequest: Codable {
+    let title: String
+    let address: String
+    let latitude: Double
+    let longitude: Double
+    let description: String?
+    let hourlyRate: Double
+    let dailyRate: Double?
+    let monthlyRate: Double?
+    let availableSlots: Int
+    let isCovered: Bool
+    let hasCctv: Bool
+    let hasEvCharging: Bool
+    let is24Hours: Bool
+    let availableStartTime: String?
+    let availableEndTime: String?
+    let availableDays: [Int]?
+    let autoAcceptBookings: Bool?
+}
+
 extension PrivateParkingResponse {
     /// Convert API response to app model
     func toAppModel() -> PrivateParkingListing {
         PrivateParkingListing(
             id: UUID(),
+            backendID: id,
             ownerID: UUID(),
             ownerName: ownerName ?? "Unknown",
             title: title,

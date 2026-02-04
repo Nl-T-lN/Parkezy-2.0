@@ -71,7 +71,9 @@ struct UnifiedMapView: View {
         }
         .onAppear {
             setupMap()
-            loadParkingDataFromBackend()
+            Task {
+                await loadParkingDataFromBackend()
+            }
         }
         .refreshable {
             await loadParkingDataFromBackend()
@@ -85,6 +87,12 @@ struct UnifiedMapView: View {
     private var mapView: some View {
         Map(position: $cameraPosition) {
             UserAnnotation()
+            
+            // Search Result Marker
+            if let searchLoc = mapViewModel.searchedLocation {
+                Marker(searchText.isEmpty ? "Searched Location" : searchText, systemImage: "mappin.circle.fill", coordinate: searchLoc)
+                    .tint(.red)
+            }
             
             // Commercial Facility Markers
             if showCommercial {
@@ -137,6 +145,9 @@ struct UnifiedMapView: View {
                 
                 TextField("Search parking...", text: $searchText)
                     .textFieldStyle(.plain)
+                    .onSubmit {
+                        performSearch()
+                    }
                 
                 if !searchText.isEmpty {
                     Button {
@@ -248,11 +259,6 @@ struct UnifiedMapView: View {
     private var filteredCommercialFacilities: [CommercialParkingFacility] {
         commercialViewModel.facilities.filter { facility in
             if filterHasEV && !facility.hasEVCharging { return false }
-            if !searchText.isEmpty {
-                let lowercased = searchText.lowercased()
-                return facility.name.lowercased().contains(lowercased) ||
-                       facility.address.lowercased().contains(lowercased)
-            }
             return true
         }
     }
@@ -261,11 +267,6 @@ struct UnifiedMapView: View {
         privateViewModel.listings.filter { listing in
             if filterHasEV && !listing.hasEVCharging { return false }
             if listing.availableSlots == 0 { return false }
-            if !searchText.isEmpty {
-                let lowercased = searchText.lowercased()
-                return listing.title.lowercased().contains(lowercased) ||
-                       listing.address.lowercased().contains(lowercased)
-            }
             return true
         }
     }
@@ -295,24 +296,35 @@ struct UnifiedMapView: View {
         }
     }
     
-    private func loadParkingDataFromBackend() {
-        Task {
-            // Get user location for nearby search
-            let location = mapViewModel.userLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+    private func loadParkingDataFromBackend(near coordinate: CLLocationCoordinate2D? = nil) async {
+        // Get search location or user location
+        let location = coordinate ?? mapViewModel.userLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
             
-            // Load private listings
-            await privateViewModel.refreshListingsFromBackend(near: location)
+        // Load private listings
+        await privateViewModel.refreshListingsFromBackend(near: location)
             
-            // Load commercial facilities
-            // await commercialViewModel.refreshFacilitiesFromBackend(near: location)
+        // Load commercial facilities
+        // await commercialViewModel.refreshFacilitiesFromBackend(near: location)
             
-            print("🔄 Refreshed parking data from backend")
-        }
+        print("🔄 Refreshed parking data from backend")
     }
     
     private func centerOnCoordinate(_ coordinate: CLLocationCoordinate2D) {
         withAnimation(.easeInOut(duration: 0.5)) {
             cameraPosition = .camera(MapCamera(centerCoordinate: coordinate, distance: 2000))
+        }
+    }
+    
+    private func performSearch() {
+        guard !searchText.isEmpty else { return }
+        
+        mapViewModel.searchLocation(query: searchText) { coordinate in
+            if let coordinate = coordinate {
+                centerOnCoordinate(coordinate)
+                Task {
+                    await loadParkingDataFromBackend(near: coordinate)
+                }
+            }
         }
     }
 }
