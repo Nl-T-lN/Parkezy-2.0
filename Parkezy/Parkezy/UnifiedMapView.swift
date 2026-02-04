@@ -64,12 +64,17 @@ struct UnifiedMapView: View {
         .sheet(isPresented: $showPrivateDetail) {
             if let listing = selectedPrivateListing {
                 NavigationStack {
-                    PrivateListingDetailView(listing: listing)
+                    EnhancedPrivateListingDetailView(listing: listing)
+                        .environmentObject(privateViewModel)
                 }
             }
         }
         .onAppear {
             setupMap()
+            loadParkingDataFromBackend()
+        }
+        .refreshable {
+            await loadParkingDataFromBackend()
         }
         .navigationTitle("Find Parking")
         .navigationBarTitleDisplayMode(.inline)
@@ -287,6 +292,21 @@ struct UnifiedMapView: View {
                 centerCoordinate: CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090),
                 distance: 15000
             ))
+        }
+    }
+    
+    private func loadParkingDataFromBackend() {
+        Task {
+            // Get user location for nearby search
+            let location = mapViewModel.userLocation?.coordinate ?? CLLocationCoordinate2D(latitude: 28.6139, longitude: 77.2090)
+            
+            // Load private listings
+            await privateViewModel.refreshListingsFromBackend(near: location)
+            
+            // Load commercial facilities
+            // await commercialViewModel.refreshFacilitiesFromBackend(near: location)
+            
+            print("🔄 Refreshed parking data from backend")
         }
     }
     

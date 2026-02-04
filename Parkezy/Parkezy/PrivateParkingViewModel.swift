@@ -637,6 +637,95 @@ class PrivateParkingViewModel: ObservableObject {
         photoData: [Data],
         description: String
     ) {
+        // Use async task to POST to Django backend
+        Task {
+            do {
+                // Create request for Django API
+                let request = CreatePrivateListingRequest(
+                    title: title,
+                    address: address,
+                    latitude: coordinates.latitude,
+                    longitude: coordinates.longitude,
+                    description: description.isEmpty ? nil : description,
+                    hourlyRate: hourlyRate,
+                    dailyRate: dailyRate > 0 ? dailyRate : nil,
+                    monthlyRate: monthlyRate > 0 ? monthlyRate : nil,
+                    availableSlots: slots,
+                    isCovered: isCovered,
+                    hasCctv: hasCCTV,
+                    hasEvCharging: hasEVCharging,
+                    is24Hours: is24x7,
+                    availableStartTime: availableStartTime?.formatted(date: .omitted, time: .shortened),
+                    availableEndTime: availableEndTime?.formatted(date: .omitted, time: .shortened),
+                    availableDays: availableDays.isEmpty ? nil : availableDays
+                )
+                
+                // POST to Django backend
+                let response = try await ParkingAPIService.shared.createPrivateListing(request)
+                
+                print("✅ Parking listing created successfully with ID: \(response.id)")
+                
+                // Convert response to app model and add to local list
+                await MainActor.run {
+                    let newListing = response.toAppModel()
+                    listings.insert(newListing, at: 0)
+                    myListings.insert(newListing, at: 0)
+                    
+                    // Calculate suggested prices including the new listing
+                    calculateSuggestedPrices()
+                }
+                
+                // Refresh all listings from backend to ensure sync
+                await refreshListingsFromBackend()
+                
+            } catch {
+                print("❌ Failed to create parking listing: \(error.localizedDescription)")
+                errorMessage = "Failed to create listing: \(error.localizedDescription)"
+                
+                // Fallback: Create listing locally (for offline mode)
+                await MainActor.run {
+                    createListingLocally(
+                        title: title,
+                        address: address,
+                        coordinates: coordinates,
+                        slots: slots,
+                        hourlyRate: hourlyRate,
+                        dailyRate: dailyRate,
+                        monthlyRate: monthlyRate,
+                        is24x7: is24x7,
+                        availableStartTime: availableStartTime,
+                        availableEndTime: availableEndTime,
+                        availableDays: availableDays,
+                        isCovered: isCovered,
+                        hasCCTV: hasCCTV,
+                        hasEVCharging: hasEVCharging,
+                        photoData: photoData,
+                        description: description
+                    )
+                }
+            }
+        }
+    }
+    
+    /// Create listing locally (fallback for offline mode)
+    private func createListingLocally(
+        title: String,
+        address: String,
+        coordinates: CLLocationCoordinate2D,
+        slots: Int,
+        hourlyRate: Double,
+        dailyRate: Double,
+        monthlyRate: Double,
+        is24x7: Bool,
+        availableStartTime: Date?,
+        availableEndTime: Date?,
+        availableDays: [Int],
+        isCovered: Bool,
+        hasCCTV: Bool,
+        hasEVCharging: Bool,
+        photoData: [Data],
+        description: String
+    ) {
         let ownerID = myListings.first?.ownerID ?? UUID()
         let ownerName = myListings.first?.ownerName ?? "Current User"
         
@@ -671,7 +760,7 @@ class PrivateParkingViewModel: ObservableObject {
             imageURLs: [],
             capturedPhotoData: photoData,
             capturedVideoURL: nil,
-            maxBookingDuration: maxDuration,
+            maxBookingDuration: .unlimited,
             suggestedHourlyRate: nil
         )
         
@@ -680,6 +769,71 @@ class PrivateParkingViewModel: ObservableObject {
         
         // Calculate suggested prices including the new listing
         calculateSuggestedPrices()
+    }
+    
+    /// Update an existing listing
+    func updateListing(_ updatedListing: PrivateParkingListing, completion: @escaping (Bool) -> Void) {
+        // Update locally first
+        if let index = listings.firstIndex(where: { $0.id == updatedListing.id }) {
+            listings[index] = updatedListing
+        }
+        
+        if let index = myListings.firstIndex(where: { $0.id == updatedListing.id }) {
+            myListings[index] = updatedListing
+        }
+        
+        // TODO: Sync with backend when API is ready
+        // For now, simulate async save
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            print("✅ Listing updated: \(updatedListing.title)")
+            completion(true)
+        }
+        
+        // Recalculate suggested prices
+        calculateSuggestedPrices()
+    }
+    
+    /// Delete a listing
+    func deleteListing(_ listing: PrivateParkingListing, completion: @escaping (Bool) -> Void) {
+        listings.removeAll { $0.id == listing.id }
+        myListings.removeAll { $0.id == listing.id }
+        
+        // TODO: Sync with backend when API is ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            print("✅ Listing deleted: \(listing.title)")
+            completion(true)
+        }
+    }
+    
+    /// Refresh listings from Django backend
+    func refreshListingsFromBackend(near location: CLLocationCoordinate2D? = nil) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            // Use nearby API if location provided, otherwise get all
+            if let location = location {
+                let responses = try await ParkingAPIService.shared.getNearbyPrivateListings(
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    radiusKm: 15
+                )
+                await MainActor.run {
+                    listings = responses.map { $0.toAppModel() }
+                }
+            } else {
+                let responses = try await ParkingAPIService.shared.getAllPrivateListings()
+                await MainActor.run {
+                    listings = responses.map { $0.toAppModel() }
+                }
+            }
+            
+            print("✅ Loaded \(listings.count) listings from Django backend")
+            
+        } catch {
+            print("❌ Failed to load listings from backend: \(error.localizedDescription)")
+            errorMessage = "Failed to load listings: \(error.localizedDescription)"
+        }
     }
     
     // MARK: - Computed Properties
